@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E2A47">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Props">
+<title>NBA Prop Board</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --court: #0E2A47;
+  --court-2: #143656;
+  --line: #24496F;
+  --chalk: #F5F7FA;
+  --net: #93A6BD;
+  --leather: #E8772E;
+  --win: #35C27A;
+  --loss: #F0575C;
+  --amber: #F2B441;
+  --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bot: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--court); color: var(--chalk); font-family: var(--body); font-size: 16px; line-height: 1.45; -webkit-text-size-adjust: 100%; }
+button, select, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--leather); outline-offset: 2px; }
+
+.top { position: sticky; top: 0; z-index: 5; background: var(--court); padding: calc(var(--safe-top) + 12px) 16px 10px; border-bottom: 1px solid var(--line); }
+.top h1 { font-family: var(--display); font-weight: 700; font-size: 26px; letter-spacing: .01em; margin: 0; line-height: 1.1; }
+.top p { margin: 2px 0 0; color: var(--net); font-size: 13px; }
+
+main { padding: 12px 16px calc(var(--safe-bot) + 88px); max-width: 760px; margin: 0 auto; }
+.view[hidden] { display: none; }
+
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: grid; grid-template-columns: repeat(3, 1fr); background: var(--court-2); border-top: 1px solid var(--line); padding-bottom: var(--safe-bot); }
+.tabs button { background: none; border: 0; padding: 12px 4px 10px; font-family: var(--display); font-weight: 600; font-size: 17px; letter-spacing: .02em; color: var(--net); border-top: 3px solid transparent; }
+.tabs button[aria-selected="true"] { color: var(--chalk); border-top-color: var(--leather); }
+
+.chips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 8px; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chips.wrap { flex-wrap: wrap; overflow: visible; }
+.chip { flex: none; border: 1px solid var(--line); background: transparent; color: var(--net); border-radius: 999px; padding: 6px 12px; font-size: 14px; font-weight: 500; white-space: nowrap; }
+.chip[aria-pressed="true"] { background: var(--chalk); color: var(--court); border-color: var(--chalk); }
+.chip.rm::after { content: " ×"; }
+
+.sortbar { display: flex; justify-content: space-between; align-items: center; color: var(--net); font-size: 13px; margin: 4px 0 6px; }
+.sortbar select { background: var(--court-2); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; font-size: 13px; }
+
+.list { list-style: none; margin: 0; padding: 0; }
+.prop { border-bottom: 1px solid var(--line); }
+.prop > button { width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; text-align: left; background: none; border: 0; padding: 12px 0; }
+.prop .name { font-weight: 600; font-size: 16px; }
+.prop .sub { grid-column: 1; color: var(--net); font-size: 13px; }
+.prop .pct { grid-row: 1 / span 2; grid-column: 2; font-family: var(--display); font-weight: 700; font-size: 28px; line-height: 1; text-align: right; font-variant-numeric: tabular-nums; }
+.prop .pct small { display: block; font-family: var(--body); font-weight: 400; font-size: 11px; color: var(--net); }
+.hi { color: var(--win); } .mid { color: var(--amber); } .lo { color: var(--loss); }
+.detail { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; padding: 0 0 14px; font-size: 14px; }
+.detail .lbl { display: block; color: var(--net); font-size: 12px; }
+.detail .l5 { display: flex; align-items: center; flex-wrap: wrap; }
+.detail .wide { grid-column: 1 / -1; }
+.bars { display: inline-flex; gap: 3px; align-items: flex-end; height: 22px; vertical-align: middle; margin-right: 8px; }
+.bars i { display: block; width: 7px; background: var(--net); border-radius: 1px; }
+.bars i.over { background: var(--win); }
+.rank { font-weight: 600; }
+.rank.tough { color: var(--loss); } .rank.avg { color: var(--amber); } .rank.soft { color: var(--win); }
+
+.panel { background: var(--court-2); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+.panel h2 { font-family: var(--display); font-weight: 700; font-size: 22px; margin: 0 0 4px; }
+.panel h3 { font-size: 13px; font-weight: 600; color: var(--net); margin: 12px 0 6px; }
+.panel p.note { color: var(--net); font-size: 13px; margin: 4px 0 0; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+select.pick { background: var(--court); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; max-width: 100%; }
+label.toggle { display: inline-flex; gap: 8px; align-items: center; font-size: 15px; }
+label.toggle input { width: 20px; height: 20px; accent-color: var(--leather); }
+.linkbtn { background: none; border: 0; color: var(--net); text-decoration: underline; font-size: 13px; padding: 0; }
+
+.multi .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.multi h2 .cap { display: block; font-family: var(--body); font-weight: 400; font-size: 12px; color: var(--net); }
+.multi .big { font-family: var(--display); font-weight: 700; font-size: 44px; line-height: 1; color: var(--leather); font-variant-numeric: tabular-nums; }
+.multi .odds { display: flex; gap: 18px; margin: 8px 0 4px; font-size: 13px; color: var(--net); }
+.multi .odds b { display: block; font-family: var(--display); font-size: 22px; color: var(--chalk); font-weight: 600; }
+.legs { list-style: none; margin: 8px 0 0; padding: 0; }
+.legs li { display: grid; grid-template-columns: 1fr auto; gap: 0 10px; padding: 9px 0; border-top: 1px solid var(--line); }
+.legs .who { font-weight: 600; }
+.legs .tag { font-size: 11px; color: var(--court); background: var(--leather); border-radius: 4px; padding: 0 5px; margin-left: 6px; vertical-align: 2px; }
+.legs .what { grid-column: 1; color: var(--net); font-size: 13px; }
+.legs .lp { grid-row: 1 / span 2; grid-column: 2; align-self: center; font-family: var(--display); font-size: 20px; font-weight: 600; }
+.empty { color: var(--net); font-size: 14px; padding: 8px 0; }
+
+.record { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.record div { text-align: center; }
+.record b { display: block; font-family: var(--display); font-size: 34px; font-weight: 700; }
+.record span { color: var(--net); font-size: 12px; }
+.who-row { display: grid; grid-template-columns: 1fr auto; gap: 0 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+.who-row .form { grid-column: 1; font-family: var(--display); letter-spacing: .18em; font-size: 15px; }
+.who-row .form .o { color: var(--win); } .who-row .form .u { color: var(--loss); }
+.who-row .rate { grid-row: 1 / span 2; grid-column: 2; text-align: right; font-family: var(--display); font-size: 22px; font-weight: 700; }
+.who-row .rate small { display: block; font-family: var(--body); font-size: 11px; font-weight: 500; }
+.hist { border-top: 1px solid var(--line); padding: 10px 0; }
+.hist .hh { display: flex; justify-content: space-between; gap: 8px; }
+.res { font-family: var(--display); font-weight: 700; font-size: 16px; }
+.res.won { color: var(--win); } .res.lost { color: var(--loss); } .res.pending, .res.void { color: var(--net); }
+.hist ul { list-style: none; margin: 4px 0 0; padding: 0; font-size: 13px; color: var(--net); }
+.hist li.over { color: var(--chalk); } .hist li.under { color: var(--loss); }
+
+.status { color: var(--net); padding: 24px 0; text-align: center; }
+.foot { color: var(--net); font-size: 12px; margin-top: 18px; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>NBA Prop Board</h1>
+  <p id="asof">Loading tonight’s lines…</p>
+</header>
+
+<main>
+  <!-- Board -->
+  <section class="view" id="view-board">
+    <div class="chips" id="stat-chips" role="group" aria-label="Stat"></div>
+    <div class="chips" id="pos-chips" role="group" aria-label="Position"></div>
+    <div class="sortbar">
+      <span id="board-count"></span>
+      <label>Sort <select id="sort">
+        <option value="hit">Est. hit %</option>
+        <option value="edge">Avg minus line</option>
+        <option value="l10">Over in last 10</option>
+        <option value="soft">Softest matchup</option>
+        <option value="h2h">Record vs opponent</option>
+        <option value="player">Player A–Z</option>
+      </select></label>
+    </div>
+    <ul class="list" id="board"></ul>
+  </section>
+
+  <!-- Multi builder -->
+  <section class="view" id="view-multi" hidden>
+    <div class="panel">
+      <h2>Build a multi</h2>
+      <h3>Stats</h3>
+      <div class="chips wrap" id="m-stats"></div>
+      <h3>Games</h3>
+      <div class="chips wrap" id="m-games"></div>
+      <h3>Players</h3>
+      <div class="row">
+        <select class="pick" id="m-player" aria-label="Add a player"></select>
+      </div>
+      <div class="chips wrap" id="m-players" style="margin-top:8px"></div>
+      <div class="row" style="margin-top:10px; justify-content: space-between">
+        <label class="toggle"><input type="checkbox" id="m-same"> Allow legs from the same game</label>
+        <button class="linkbtn" id="m-clear" type="button">Clear picks</button>
+      </div>
+      <p class="note">Nothing picked means everything is in. Picked players are always included with their likeliest leg; the rest fills by highest estimated hit rate, one leg per player.</p>
+    </div>
+    <div id="multis"></div>
+    <p class="foot">Fair odds are what the multi should pay if the estimate is right. It’s only value when your bookie pays more. Estimates assume legs don’t affect each other and don’t know about injuries. 18+ · Gambling Help 1800 858 858.</p>
+  </section>
+
+  <!-- History -->
+  <section class="view" id="view-history" hidden>
+    <div class="panel">
+      <h2>Suggested multis record</h2>
+      <div class="record" id="record"></div>
+      <p class="note">The builder’s default 3, 4 and 5-leg multis, logged each morning and settled the next.</p>
+    </div>
+    <div class="panel">
+      <h2>Who’s working</h2>
+      <div class="chips" id="h-stats"></div>
+      <div class="chips" id="h-show"></div>
+      <div id="who"></div>
+      <p class="note">Every settled line on the board. Working: 60%+ over at least 5 lines. Not working: 40% or worse.</p>
+    </div>
+    <div class="panel">
+      <h2>Recent multis</h2>
+      <div id="hist"></div>
+    </div>
+  </section>
+</main>
+
+<nav class="tabs" role="tablist">
+  <button role="tab" data-view="board" aria-selected="true">Board</button>
+  <button role="tab" data-view="multi" aria-selected="false">Multi</button>
+  <button role="tab" data-view="history" aria-selected="false">History</button>
+</nav>
+
+<script>
+const STATS = [['PTS', 'Points'], ['REB', 'Rebounds'], ['AST', 'Assists'], ['3PM', 'Threes'], ['PRA', 'P+R+A'], ['PR', 'P+R'], ['PA', 'P+A'], ['RA', 'R+A']];
+const STAT_WORD = { PTS: 'points', REB: 'rebounds', AST: 'assists', '3PM': 'threes', PRA: 'pts + reb + ast', PR: 'pts + reb', PA: 'pts + ast', RA: 'reb + ast' };
+const COUNT_STATS = new Set(['AST', 'REB', '3PM']);
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const f1 = (x) => Number(x).toFixed(1);
+const money = (x) => '$' + Number(x).toFixed(2);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('nba:' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('nba:' + k, JSON.stringify(v)); } catch (e) { /* private mode */ } }
+};
+
+let PROPS = [], LEGS = [], HISTORY = null;
+const ui = { stat: store.get('stat', 'PTS'), pos: 'All', sort: 'hit', open: null, hstat: 'All', hshow: 'all' };
+const picks = store.get('picks', { stats: [], games: [], players: [], same: false });
+const savePicks = () => store.set('picks', picks);
+
+/* ---------- estimate (same as the script) ---------- */
+const normCdf = (z) => { const t = 1 / (1 + 0.2316419 * Math.abs(z)); const d = 0.3989423 * Math.exp(-z * z / 2); const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))); return z > 0 ? 1 - p : p; };
+function estHit(r) {
+  const rank = Number(r.def_rank);
+  const adj = rank > 0 ? 1 + 0.1 * (rank - 15.5) / 14.5 : 1;
+  const mean = Number(r.season_avg) * adj, line = Number(r.line);
+  let model;
+  if (COUNT_STATS.has(r.stat)) {
+    const need = Math.floor(line) + 1; let term = Math.exp(-mean), below = 0;
+    for (let i = 0; i < need; i++) { below += term; term *= mean / (i + 1); }
+    model = 1 - below;
+  } else {
+    const sd = Number(r.sd) > 0 ? Number(r.sd) : Math.sqrt(Math.max(mean, 1)) * 1.4;
+    model = 1 - normCdf((line - mean) / sd);
+  }
+  const n = Number(r.l10_n) || 0;
+  return Math.round((n >= 5 ? 0.6 * model + 0.4 * (Number(r.l10_over) / n) : model) * 1000) / 10;
+}
+const gameOf = (r) => r.game || [r.team, r.opp].sort().join(' v ');
+const tone = (p) => (p >= 65 ? 'hi' : p >= 50 ? 'mid' : 'lo');
+const rankTone = (k) => (k <= 10 ? 'tough' : k <= 20 ? 'avg' : 'soft');
+
+/* ---------- data ---------- */
+async function load() {
+  try {
+    const res = await fetch('data/props.json?v=' + Date.now());
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    PROPS = data.rows || [];
+    LEGS = PROPS.filter((r) => r.line != null && r.season_avg != null).map((r) => ({ ...r, hit: estHit(r), game: gameOf(r) }));
+    const d = new Date((data.slate || '') + 'T12:00:00');
+    $('asof').textContent = `${PROPS.length} lines for ${isNaN(d) ? 'tonight' : d.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })} (US date) · FanDuel`;
+  } catch (e) {
+    $('asof').textContent = 'Couldn’t load tonight’s lines. Check your connection, or that this morning’s script ran.';
+  }
+  try {
+    const res = await fetch('data/history.json?v=' + Date.now());
+    if (res.ok) HISTORY = await res.json();
+  } catch (e) { HISTORY = null; }
+  renderAll();
+}
+
+/* ---------- board ---------- */
+function chipRow(container, items, isOn, onTap, cls = 'chip') {
+  container.replaceChildren();
+  for (const [value, label] of items) {
+    const b = el('button', cls, label); b.type = 'button';
+    b.setAttribute('aria-pressed', String(isOn(value)));
+    b.addEventListener('click', () => onTap(value));
+    container.appendChild(b);
+  }
+}
+function bars(values, line) {
+  const wrap = el('span', 'bars'); const max = Math.max(...values, line, 1);
+  for (const v of values) { const i = el('i', v > line ? 'over' : ''); i.style.height = Math.max(2, (v / max) * 22) + 'px'; wrap.appendChild(i); }
+  return wrap;
+}
+const nums = (s) => String(s || '').split('/').map((x) => parseFloat(x)).filter((x) => !isNaN(x));
+
+function renderBoard() {
+  chipRow($('stat-chips'), STATS, (v) => v === ui.stat, (v) => { ui.stat = v; store.set('stat', v); ui.open = null; renderBoard(); });
+  chipRow($('pos-chips'), [['All', 'All'], ['Guard', 'Guards'], ['Forward', 'Forwards'], ['Center', 'Centers']], (v) => v === ui.pos, (v) => { ui.pos = v; renderBoard(); });
+  const list = $('board'); list.replaceChildren();
+  if (!LEGS.length) { list.appendChild(el('li', 'status', 'No lines yet. They appear after the 7 am update.')); $('board-count').textContent = ''; return; }
+  let rows = LEGS.filter((r) => r.stat === ui.stat && (ui.pos === 'All' || r.position === ui.pos));
+  const key = {
+    hit: (r) => -r.hit, edge: (r) => -(r.season_avg - r.line), l10: (r) => -(r.l10_n ? r.l10_over / r.l10_n : -1),
+    soft: (r) => -(r.def_rank || 0), h2h: (r) => -(r.h2h_n ? r.h2h_over / r.h2h_n : -1), player: (r) => r.player
+  }[ui.sort];
+  rows.sort((a, b) => { const x = key(a), y = key(b); return x < y ? -1 : x > y ? 1 : 0; });
+  $('board-count').textContent = `${rows.length} ${STAT_WORD[ui.stat]} lines`;
+  for (const r of rows) {
+    const li = el('li', 'prop');
+    const btn = el('button'); btn.type = 'button'; btn.setAttribute('aria-expanded', String(ui.open === r.id));
+    btn.append(el('span', 'name', r.player), el('span', 'sub', `Over ${f1(r.line)} vs ${r.opp} · avg ${f1(r.season_avg)}`));
+    const pct = el('span', 'pct ' + tone(r.hit), f1(r.hit) + '%'); pct.appendChild(el('small', null, 'est. hit')); btn.appendChild(pct);
+    btn.addEventListener('click', () => { ui.open = ui.open === r.id ? null : r.id; renderBoard(); });
+    li.appendChild(btn);
+    if (ui.open === r.id) {
+      const d = el('div', 'detail');
+      const cell = (label, node, wide) => { const c = el('div', wide ? 'wide' : ''); c.appendChild(el('span', 'lbl', label)); if (typeof node === 'string') c.append(node); else c.appendChild(node); d.appendChild(c); };
+      const l5 = el('span', 'l5'); if (r.last5_actual) { l5.append(bars(nums(r.last5_actual), r.line), r.last5_actual); } else l5.textContent = '—';
+      cell('Last 5 games (oldest → newest)', l5, true);
+      cell('Over in last 10', r.l10_n ? `${r.l10_over} of ${r.l10_n}` : '—');
+      const rk = el('span', 'rank ' + (r.def_rank ? rankTone(r.def_rank) : ''), r.def_rank ? `#${r.def_rank} ${r.def_rank <= 10 ? 'tough' : r.def_rank <= 20 ? 'average' : 'soft'}` : '—');
+      cell(`${r.opp} defence vs ${r.position.toLowerCase()}s`, rk);
+      cell('Season avg − line', (r.season_avg - r.line >= 0 ? '+' : '') + f1(r.season_avg - r.line));
+      cell('FanDuel price', r.price ? money(r.price) : '—');
+      if (r.chances != null) cell(r.stat === 'AST' ? 'Potential assists' : 'Rebound chances', f1(r.chances));
+      cell(`vs ${r.opp}, last meetings`, r.h2h_n ? `${r.h2h_games} (avg ${f1(r.h2h_avg)}, ${r.h2h_over} of ${r.h2h_n} over)` : 'No recent meetings', true);
+      li.appendChild(d);
+    }
+    list.appendChild(li);
+  }
+}
+
+/* ---------- multi builder ---------- */
+function buildMulti(size) {
+  let legs = LEGS;
+  if (picks.stats.length) legs = legs.filter((l) => picks.stats.includes(l.stat));
+  const ranked = [...legs].sort((a, b) => b.hit - a.hit);
+  const pick = [], players = new Set(), games = new Set();
+  for (const name of picks.players) {
+    const best = ranked.find((l) => l.player === name);
+    if (best) { pick.push({ ...best, forced: true }); players.add(name); games.add(best.game); }
+  }
+  if (pick.length > size) return { error: `You’ve picked ${pick.length} players for ${size} legs.` };
+  for (const l of ranked) {
+    if (pick.length === size) break;
+    if (picks.games.length && !picks.games.includes(l.game)) continue;
+    if (players.has(l.player) || (!picks.same && games.has(l.game))) continue;
+    pick.push(l); players.add(l.player); games.add(l.game);
+  }
+  if (pick.length < size) return { error: picks.same ? 'Not enough legs. Pick more games or stats.' : 'Not enough separate games. Pick more games or allow same-game legs.' };
+  const chance = pick.reduce((a, l) => a * l.hit / 100, 1);
+  const price = pick.every((l) => l.price > 1) ? pick.reduce((a, l) => a * l.price, 1) : null;
+  return { pick, chance, fair: 1 / chance, price };
+}
+
+function renderMulti() {
+  const toggle = (list, v) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
+  chipRow($('m-stats'), STATS, (v) => picks.stats.includes(v), (v) => { picks.stats = toggle(picks.stats, v); savePicks(); renderMulti(); });
+  const games = [...new Set(LEGS.map((l) => l.game))].sort();
+  picks.games = picks.games.filter((g) => games.includes(g));
+  chipRow($('m-games'), games.map((g) => [g, g]), (v) => picks.games.includes(v), (v) => { picks.games = toggle(picks.games, v); savePicks(); renderMulti(); });
+  const sel = $('m-player'); sel.replaceChildren(el('option', null, 'Add a player…')); sel.firstChild.value = '';
+  const pool = LEGS.filter((l) => !picks.games.length || picks.games.includes(l.game));
+  for (const n of [...new Set(pool.map((l) => l.player))].sort()) if (!picks.players.includes(n)) { const o = el('option', null, n); o.value = n; sel.appendChild(o); }
+  chipRow($('m-players'), picks.players.map((p) => [p, p]), () => true, (v) => { picks.players = picks.players.filter((x) => x !== v); savePicks(); renderMulti(); }, 'chip rm');
+  $('m-same').checked = picks.same;
+
+  const out = $('multis'); out.replaceChildren();
+  if (!LEGS.length) { out.appendChild(el('p', 'status', 'No lines loaded yet.')); return; }
+  for (const size of [3, 4, 5]) {
+    const m = buildMulti(size);
+    const card = el('article', 'panel multi');
+    const head = el('div', 'head'); const h = el('h2', null, `${size}-leg multi`); h.appendChild(el('span', 'cap', 'chance all legs hit →')); head.append(h);
+    if (m.pick) { const big = el('span', 'big', f1(m.chance * 100) + '%'); big.title = 'Chance all legs hit'; head.appendChild(big); }
+    card.appendChild(head);
+    if (m.error) { card.appendChild(el('p', 'empty', m.error)); out.appendChild(card); continue; }
+    const odds = el('div', 'odds');
+    const o1 = el('div'); o1.append(el('b', null, money(m.fair)), 'fair odds');
+    const o2 = el('div'); o2.append(el('b', null, m.price ? money(m.price) : '—'), 'FanDuel price');
+    odds.append(o1, o2); card.appendChild(odds);
+    const ul = el('ul', 'legs');
+    for (const l of m.pick) {
+      const li = el('li'); const who = el('span', 'who', l.player); if (l.forced) who.appendChild(el('span', 'tag', 'picked'));
+      const form = l.l10_n ? ` · ${l.l10_over}/${l.l10_n} last 10` : '';
+      const vs = l.h2h_n ? ` · ${l.h2h_over}/${l.h2h_n} vs ${l.opp}` : '';
+      li.append(who, el('span', 'lp ' + tone(l.hit), f1(l.hit) + '%'), el('span', 'what', `Over ${f1(l.line)} ${STAT_WORD[l.stat]} vs ${l.opp}${form}${vs}`));
+      ul.appendChild(li);
+    }
+    card.appendChild(ul); out.appendChild(card);
+  }
+}
+$('m-player').addEventListener('change', (e) => { if (e.target.value) { picks.players = [...new Set([...picks.players, e.target.value])]; savePicks(); renderMulti(); } });
+$('m-same').addEventListener('change', (e) => { picks.same = e.target.checked; savePicks(); renderMulti(); });
+$('m-clear').addEventListener('click', () => { Object.assign(picks, { stats: [], games: [], players: [], same: false }); savePicks(); renderMulti(); });
+
+/* ---------- history ---------- */
+function renderHistory() {
+  const rec = $('record'); rec.replaceChildren();
+  const summary = (HISTORY && HISTORY.summary) || [];
+  for (const size of [3, 4, 5]) {
+    const t = summary.find((s) => Number(s.size) === size) || { won: 0, lost: 0 };
+    const c = el('div'); c.append(el('b', null, `${t.won}–${t.lost}`), el('span', null, `${size}-leg won–lost`)); rec.appendChild(c);
+  }
+  chipRow($('h-stats'), [['All', 'All'], ...STATS.map(([k]) => [k, k])], (v) => v === ui.hstat, (v) => { ui.hstat = v; renderHistory(); });
+  chipRow($('h-show'), [['all', 'Everyone'], ['Working', 'Working'], ['Not working', 'Not working']], (v) => v === ui.hshow, (v) => { ui.hshow = v; renderHistory(); });
+  const who = $('who'); who.replaceChildren();
+  const status = (p) => (p.n < 5 ? 'Too early' : p.overs / p.n >= 0.6 ? 'Working' : p.overs / p.n <= 0.4 ? 'Not working' : 'Mixed');
+  let players = ((HISTORY && HISTORY.players) || []).filter((p) => ui.hstat === 'All' || p.stat === ui.hstat);
+  if (ui.hshow !== 'all') players = players.filter((p) => status(p) === ui.hshow);
+  players.sort((a, b) => (b.n >= 5) - (a.n >= 5) || b.overs / b.n - a.overs / a.n || b.n - a.n);
+  if (!players.length) who.appendChild(el('p', 'empty', HISTORY ? 'Nothing here yet.' : 'History starts after the first morning’s results are settled.'));
+  for (const p of players.slice(0, 150)) {
+    const row = el('div', 'who-row');
+    row.appendChild(el('span', 'name', `${p.player} · ${p.stat}`));
+    const rate = Math.round(p.overs / p.n * 100); const st = status(p);
+    const r = el('span', 'rate ' + (st === 'Working' ? 'hi' : st === 'Not working' ? 'lo' : ''), rate + '%'); r.appendChild(el('small', null, `${p.overs}/${p.n} · ${st}`));
+    row.appendChild(r);
+    const form = el('span', 'form'); for (const ch of (p.recent || '')) form.appendChild(el('span', ch === 'O' ? 'o' : 'u', ch));
+    row.appendChild(form); who.appendChild(row);
+  }
+  const hist = $('hist'); hist.replaceChildren();
+  const multis = (HISTORY && HISTORY.multis) || [];
+  if (!multis.length) hist.appendChild(el('p', 'empty', 'No multis logged yet.'));
+  const MARK = { over: '✓', under: '✗', dnp: '– void', pending: '…' };
+  for (const m of multis) {
+    const box = el('div', 'hist'); const hh = el('div', 'hh');
+    const d = new Date(m.slate + 'T12:00:00');
+    hh.append(el('span', null, `${m.size}-leg · ${d.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })}`), el('span', 'res ' + m.result, m.result[0].toUpperCase() + m.result.slice(1)));
+    box.appendChild(hh);
+    const ul = el('ul');
+    for (const l of m.legs || []) ul.appendChild(el('li', l.result, `${MARK[l.result] || ''} ${l.player} over ${f1(l.line)} ${STAT_WORD[l.stat] || l.stat}${l.actual == null ? '' : ` — had ${l.actual}`}`));
+    box.appendChild(ul); hist.appendChild(box);
+  }
+}
+
+/* ---------- shell ---------- */
+document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll('.tabs button').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+  document.querySelectorAll('.view').forEach((v) => { v.hidden = v.id !== 'view-' + b.dataset.view; });
+  location.hash = b.dataset.view; window.scrollTo(0, 0);
+}));
+$('sort').addEventListener('change', (e) => { ui.sort = e.target.value; renderBoard(); });
+function renderAll() { renderBoard(); renderMulti(); renderHistory(); }
+const start = location.hash.slice(1);
+if (['multi', 'history'].includes(start)) document.querySelector(`.tabs [data-view="${start}"]`).click();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+load();
+</script>
+</body>
+</html>
